@@ -1,0 +1,453 @@
+mysql> -- Using a previously created database
+mysql> use mobile_phones;
+Database changed
+mysql> -- Create a table
+mysql> create table phones(
+    -> brand varchar(20) not null,
+    -> naira_price int not null,
+    -> city varchar(25) not null,
+    -> state varchar(18) not null,
+    -> phone_condition varchar(20) not null,
+    -> color varchar(15) not null);
+Query OK, 0 rows affected (0.98 sec)
+
+mysql> -- Load the csv file into the table
+mysql> load data local infile 'C:/Users/user/Desktop/DataScience/db_mgt/phones.csv'
+    -> into table phones
+    -> character set utf8mb4
+    -> FIELDS TERMINATED BY ','
+    -> LINES TERMINATED BY '\r\n'
+    -> IGNORE 1 ROWS;
+Query OK, 2291 rows affected (1.70 sec)
+Records: 2291  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> -- Inspect the dataset
+mysql> select * from phones limit 5;
++---------+-------------+----------+--------+-----------------+--------+
+| brand   | naira_price | city     | state  | phone_condition | color  |
++---------+-------------+----------+--------+-----------------+--------+
+| Google  |      620000 | Ikeja    | Lagos  | Brand New       | White  |
+| Google  |      380000 | Ikeja    | Lagos  | Brand New       | Black  |
+| Samsung |      135000 | Alimosho | Lagos  | Used            | Blue   |
+| Samsung |      260000 | Ikeja    | Lagos  | Used            | Purple |
+| Apple   |      350000 | Ikeja    | Lagos  | Used            | Gray   |
++---------+-------------+----------+--------+-----------------+--------+
+5 rows in set (0.00 sec)
+
+mysql> -- check all columns for preceeding and tailing spaces
+mysql> select concat('<', brand, '>') from phones
+    -> group by brand limit 2;
++-------------------------+
+| concat('<', brand, '>') |
++-------------------------+
+| <Google>                |
+| <Samsung>               |
++-------------------------+
+2 rows in set (0.24 sec)
+
+mysql> select concat('<', city, '>') as city from phones
+    -> group by city limit 2;
++------------+
+| city       |
++------------+
+| <Ikeja>    |
+| <Alimosho> |
++------------+
+2 rows in set, 1 warning (0.09 sec)
+
+mysql> select concat('<', state, '>') as state from phones
+    -> group by state limit 2;
++----------------+
+| state          |
++----------------+
+| <Lagos >       |
+| <Abuja (FCT) > |
++----------------+
+2 rows in set, 1 warning (0.01 sec)
+
+mysql> select concat('<', phone_condition, '>') as phone_condition from phones
+    -> group by phone_condition limit 2;
++-----------------+
+| phone_condition |
++-----------------+
+| <Brand New>     |
+| <Used>          |
++-----------------+
+2 rows in set, 1 warning (0.01 sec)
+
+mysql> select concat('<', color, '>') as color from phones
+    -> group by color limit 2;
++---------+
+| color   |
++---------+
+| <White> |
+| <Black> |
++---------+
+2 rows in set, 1 warning (0.01 sec)
+
+mysql> -- remove the tailing spaces from state column
+mysql> UPDATE phones
+    -> 
+    -> SET state = RTRIM(state) WHERE state LIKE '% ';
+Query OK, 2291 rows affected (0.31 sec)
+Rows matched: 2291  Changed: 2291  Warnings: 0
+
+mysql> -- confirm removal
+mysql> select concat('<', state, '>') as state from phones
+    -> group by state limit 1;
++---------+
+| state   |
++---------+
+| <Lagos> |
++---------+
+1 row in set, 1 warning (0.01 sec)
+
+mysql> -- DATA ANALYSIS OF PHONES DATASET
+mysql> 
+mysql> -- the city and state with highest sales
+mysql> select city, state, sum(naira_price) as total_sales
+    -> from phones
+    -> group by city, state
+    -> order by total_sales desc
+    -> limit 1;
++-------+-------+-------------+
+| city  | state | total_sales |
++-------+-------+-------------+
+| Ikeja | Lagos |   290484395 |
++-------+-------+-------------+
+1 row in set (0.01 sec)
+
+mysql> -- How many brands are available
+mysql> select count(distinct brand) as no_brands from phones;
++-----------+
+| no_brands |
++-----------+
+|        29 |
++-----------+
+1 row in set (0.10 sec)
+
+mysql> -- list of the brands present
+mysql> select distinct brand from phones;
++---------------+
+| brand         |
++---------------+
+| Google        |
+| Samsung       |
+| Apple         |
+| Hydrogen      |
+| Tecno         |
+| Xiaomi        |
+| Nokia         |
+| Vivo          |
+| infinix       |
+| OnePlus       |
+| Itel          |
+| Honor         |
+| Gionee        |
+| Sony Ericsson |
+| Others        |
+| Motorola      |
+| Oppo          |
+| Huawei        |
+| Doogee        |
+| Sony          |
+| Iridium       |
+| Thuraya       |
+| Microsoft     |
+| Sowhat        |
+| Alcatel       |
+| LeEco         |
+| LG            |
+| HTC           |
+| ZTE           |
++---------------+
+29 rows in set (0.01 sec)
+
+mysql> -- How many new phones were sold in Abuja
+mysql> select count(phone_condition) as NewAbujaPhones
+    -> from phones
+    -> where state='Abuja (FCT)' and phone_condition='Brand New';
++----------------+
+| NewAbujaPhones |
++----------------+
+|             15 |
++----------------+
+1 row in set (0.00 sec)
+
+mysql> -- How many used phones were sold altogether in Port Harcourt and Akure
+mysql> select sum(
+    ->     case when city in ('Port Harcourt', 'Akure') and phone_condition='Used' then 1
+    ->     end) as PH_Akure_usedPhones
+    -> from phones;
++---------------------+
+| PH_Akure_usedPhones |
++---------------------+
+|                 279 |
++---------------------+
+1 row in set (0.04 sec)
+
+mysql> -- five states with the most patronage
+mysql> select state, sum(naira_price) as total_sales
+    -> from phones
+    -> group by state order by total_sales desc
+    -> limit 5;
++-------------+-------------+
+| state       | total_sales |
++-------------+-------------+
+| Lagos       |   331295395 |
+| Rivers      |    69750196 |
+| Ondo        |    61461500 |
+| Abuja (FCT) |    44237000 |
+| Oyo         |    42942495 |
++-------------+-------------+
+5 rows in set (0.01 sec)
+
+mysql> -- states whose average sales is greater than the overall average sales
+mysql> select state, round(avg(naira_price), 2) as state_groupMean
+    -> from phones
+    -> group by state
+    -> having state_groupMean > (select avg(naira_price) as overall_mean from phones)
+    -> order by state_groupMean desc;
++-------------+-----------------+
+| state       | state_groupMean |
++-------------+-----------------+
+| Adamawa     |       380000.00 |
+| Akwa Ibom   |       377021.74 |
+| Delta       |       346521.74 |
+| Abuja (FCT) |       330126.87 |
+| Lagos       |       319167.05 |
+| Kwara       |       302600.00 |
++-------------+-----------------+
+6 rows in set (0.01 sec)
+
+mysql> -- What is the color frequency of refurbished phones
+mysql> select color, count(color) as colorCount
+    -> from phones
+    -> where phone_condition='Refurbished'
+    -> group by color
+    -> order by colorCount desc;
++--------+------------+
+| color  | colorCount |
++--------+------------+
+| Black  |          6 |
+| Gold   |          3 |
+| Blue   |          3 |
+| Yellow |          2 |
+| Red    |          2 |
+| Purple |          1 |
++--------+------------+
+6 rows in set (0.00 sec)
+
+mysql> -- How many black used phones are there
+mysql> select count(*) as black_usedPhones from phones
+    -> where (color, phone_condition) = ('Black', 'Used');
++------------------+
+| black_usedPhones |
++------------------+
+|              439 |
++------------------+
+1 row in set (0.01 sec)
+
+mysql> -- In each state, how many phones are new, used or refurbished
+mysql> select state,
+    -> count(
+    ->     case when phone_condition='Brand New' then 1 else null end) as newPhones,
+    -> count(
+    ->     case when phone_condition='Used' then 1 else null end) as usedPhones,
+    -> count(
+    ->     case when phone_condition='Refurbished' then 1 else null end)
+    ->     as refurbishedPhones
+    -> from phones
+    -> group by state;
++-------------+-----------+------------+-------------------+
+| state       | newPhones | usedPhones | refurbishedPhones |
++-------------+-----------+------------+-------------------+
+| Lagos       |       299 |        729 |                10 |
+| Abuja (FCT) |        15 |        119 |                 0 |
+| Ekiti       |         0 |          2 |                 0 |
+| Oyo         |        23 |        168 |                 0 |
+| Ondo        |        37 |        313 |                 2 |
+| Adamawa     |         0 |          1 |                 0 |
+| Osun        |         0 |         18 |                 2 |
+| Kwara       |         2 |         28 |                 0 |
+| Niger       |         1 |          1 |                 0 |
+| Anambra     |         4 |         26 |                 0 |
+| Imo         |         1 |          3 |                 0 |
+| Akwa Ibom   |         8 |         38 |                 0 |
+| Edo         |         2 |          6 |                 0 |
+| Delta       |         7 |         15 |                 1 |
+| Kano        |         0 |          2 |                 2 |
+| Enugu       |         2 |          4 |                 0 |
+| Rivers      |        59 |        310 |                 0 |
+| Abia        |         3 |         17 |                 0 |
+| Kaduna      |         1 |          2 |                 0 |
+| Bayelsa     |         0 |          3 |                 0 |
+| Ogun        |         0 |          2 |                 0 |
+| Taraba      |         0 |          2 |                 0 |
+| Cross River |         0 |          1 |                 0 |
++-------------+-----------+------------+-------------------+
+23 rows in set (0.01 sec)
+
+mysql> -- What brand names begins with 'H' and also contain 'o' and 'r' in any order
+mysql> -- METHOD 1: using the LIKE keyword
+mysql> 
+mysql> select distinct brand from phones
+    -> where brand
+    -> like 'H%' and brand like '%o%' and brand like '%r%';
++----------+
+| brand    |
++----------+
+| Hydrogen |
+| Honor    |
++----------+
+2 rows in set (0.00 sec)
+
+mysql> -- METHOD 2:using regular expression
+mysql> select distinct brand from phones
+    -> where brand
+    -> regexp '(^H)(?=.*o)(?=.*r)';
++----------+
+| brand    |
++----------+
+| Hydrogen |
+| Honor    |
++----------+
+2 rows in set (0.01 sec)
+
+mysql> -- Which brand has the highest number of new phones
+mysql> select brand, count(phone_condition) as quantity
+    -> from phones
+    -> where phone_condition='Brand New'
+    -> group by brand order by brand
+    -> limit 1;
++-------+----------+
+| brand | quantity |
++-------+----------+
+| Apple |      397 |
++-------+----------+
+1 row in set (0.01 sec)
+
+mysql> -- Which brand has the LOWEST number of USED phones
+mysql> select brand, count(phone_condition) as quantity
+    -> from phones
+    -> where phone_condition='Used'
+    -> group by brand order by brand desc
+    -> limit 1;
++-------+----------+
+| brand | quantity |
++-------+----------+
+| ZTE   |        1 |
++-------+----------+
+1 row in set (0.01 sec)
+
+mysql> -- How much was made from Surulere only
+mysql> select city, sum(naira_price) as total
+    -> from phones
+    -> where city='Surulere';
++----------+---------+
+| city     | total   |
++----------+---------+
+| Surulere | 1915000 |
++----------+---------+
+1 row in set (0.00 sec)
+
+mysql> -- top 5 brand based on popularity
+mysql> select brand, count(brand) as quantity
+    -> from phones
+    -> group by brand order by quantity desc
+    -> limit 5;
++---------+----------+
+| brand   | quantity |
++---------+----------+
+| Apple   |     2070 |
+| Samsung |       56 |
+| Google  |       39 |
+| Huawei  |       30 |
+| infinix |       19 |
++---------+----------+
+5 rows in set (0.01 sec)
+
+mysql> -- top six brands based on sales
+mysql> select brand, sum(naira_price) as sum
+    -> from phones
+    -> group by brand order by sum desc
+    -> limit 6;
++---------+-----------+
+| brand   | sum       |
++---------+-----------+
+| Apple   | 563037089 |
+| Google  |  15710500 |
+| Samsung |  12220000 |
+| Huawei  |   2567000 |
+| OnePlus |   1812000 |
+| infinix |   1618000 |
++---------+-----------+
+6 rows in set (0.01 sec)
+
+mysql> -- By how much is sales in Alimosho different from that of Surulere
+mysql> select
+    ->     (select sum(naira_price) as alimosho_sum
+    ->     from phones
+    ->     where city='Alimosho') -
+    ->     (select sum(naira_price) as surulere_sum
+    ->     from phones
+    ->     where city = 'Surulere')
+    -> as Al_Su_Sales_difference;
++------------------------+
+| Al_Su_Sales_difference |
++------------------------+
+|                1415000 |
++------------------------+
+1 row in set (0.01 sec)
+
+mysql> -- switch to another database
+mysql> use sakila;
+Database changed
+mysql> 
+mysql> -- Find the actor's first and last name that have acted the most in each category 
+mysql> 
+mysql> with most_actor_in_each_category as (
+    ->     select b.actor_id, count(b.film_id) as total_films, t.category_id
+    ->     from film_actor b
+    ->     inner join film_category t
+    ->     on b.film_id = t.film_id
+    ->     group by b.actor_id, t.category_id
+    -> ),
+    -> genre as (
+    ->     select r.category_id, name
+    ->     from category r
+    ->     inner join film_category u
+    ->     on u.category_id = r.category_id
+    ->     group by u.category_id
+    -> )
+    -> select x.first_name, x.last_name, z.name, max(y.total_films) as maxfilmCount
+    -> from actor x
+    -> join most_actor_in_each_category y
+    -> on x.actor_id = y.actor_id
+    -> join genre z
+    -> on y.category_id = z.category_id
+    -> group by z.name
+    -> order by maxfilmCount desc;
++------------+--------------+-------------+--------------+
+| first_name | last_name    | name        | maxfilmCount |
++------------+--------------+-------------+--------------+
+| ALEC       | WAYNE        | Sports      |            9 |
+| CHRISTIAN  | AKROYD       | Children    |            7 |
+| MAE        | HOFFMAN      | Drama       |            7 |
+| KIRSTEN    | PALTROW      | Foreign     |            7 |
+| BOB        | FAWCETT      | Horror      |            7 |
+| CARY       | MCCONAUGHEY  | New         |            7 |
+| ADAM       | GRANT        | Sci-Fi      |            7 |
+| JOHNNY     | LOLLOBRIGIDA | Action      |            6 |
+| REESE      | KILMER       | Animation   |            6 |
+| WOODY      | HOFFMAN      | Classics    |            6 |
+| JIM        | MOSTEL       | Comedy      |            6 |
+| PENELOPE   | GUINESS      | Documentary |            6 |
+| GARY       | PHOENIX      | Family      |            6 |
+| DUSTIN     | TAUTOU       | Games       |            5 |
+| VAL        | BOLGER       | Music       |            5 |
+| CUBA       | ALLEN        | Travel      |            5 |
++------------+--------------+-------------+--------------+
+16 rows in set (0.28 sec)
+
+mysql> Terminal close -- exit!
