@@ -1,0 +1,121 @@
+------------Phone Analysis with Postgresql------------
+
+-- Function to check for duplicates
+CREATE OR REPLACE FUNCTION is_duplicate()
+RETURNS BOOLEAN
+AS $$
+DECLARE
+    duplicate_count INTEGER;
+BEGIN
+    -- Count the number of duplicate rows in the phones table
+    SELECT COUNT(*)
+    INTO duplicate_count
+    FROM (
+        SELECT brand, naira_price, city, state, phone_condition, color
+        FROM phones
+    ) AS subquery
+    GROUP BY brand, naira_price, city, state, phone_condition, color
+    HAVING COUNT(*) > 1;
+
+    -- If duplicate_count is greater than 1, there are duplicate rows
+    IF duplicate_count > 1 THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION
+
+SELECT is_duplicate();
+ is_duplicate 
+--------------
+ t
+(1 row)
+
+
+WITH duplicates AS (
+    SELECT brand, naira_price, city, state, phone_condition, color,
+        COUNT(*) - 1 AS redundant
+    FROM phones
+    GROUP BY brand, naira_price, city, state, phone_condition, color
+    HAVING COUNT(*) > 1
+)
+
+SELECT SUM(a.redundant) AS duplicate_rows FROM duplicates a;
+-- Therefore the number of duplicates is:
+ duplicate_rows 
+----------------
+            495
+(1 row)
+
+
+-- To delete duplicates, first add a serial column
+ALTER TABLE phones
+ADD id SERIAL PRIMARY KEY;
+ALTER TABLE
+
+-- Delete duplicate rows
+DELETE FROM phones ph
+USING phones phs
+WHERE ph.id < phs.id
+AND ph.brand = phs.brand
+AND ph.naira_price = phs.naira_price
+AND ph.city = phs.city
+AND ph.state = phs.state
+AND ph.phone_condition = phs.phone_condition
+AND ph.color = phs.color;
+DELETE 495
+
+-- Check the number of rows remaining
+SELECT COUNT(*) FROM phones;
+ count 
+-------
+  1796
+(1 row)
+
+
+-- What is the mean, median and modal phone price (in naira)
+SELECT
+    brand,
+    ROUND(AVG(naira_price),2) AS mean_price,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY naira_price) AS median_price,
+    MODE() WITHIN GROUP (ORDER BY naira_price) AS mode_price
+FROM phones
+GROUP BY brand
+ORDER BY mean_price;
+
+     brand     | mean_price | median_price | mode_price 
+---------------+------------+--------------+------------
+ Alcatel       |   26500.00 |        26500 |      26500
+ ZTE           |   28000.00 |        28000 |      28000
+ HTC           |   32500.00 |        32500 |      32500
+ Gionee        |   38750.00 |        37500 |      35000
+ Honor         |   42800.00 |        37000 |      36000
+ LeEco         |   45000.00 |        45000 |      45000
+ Sowhat        |   45000.00 |        45000 |      45000
+ Itel          |   45000.00 |        45000 |      45000
+ Oppo          |   64250.00 |        64250 |      60000
+ Nokia         |   69333.33 |        54000 |      30000
+ Tecno         |   71666.67 |        77000 |      90000
+ Vivo          |   72400.00 |        62000 |      25000
+ Sony          |   75000.00 |        75000 |      75000
+ Doogee        |   83000.00 |        83000 |      83000
+ infinix       |   83222.22 |        82500 |      45000
+ Huawei        |   91423.08 |        57500 |      45000
+ Xiaomi        |   97285.71 |       110000 |      23000
+ Sony Ericsson |  100000.00 |       100000 |     100000
+ LG            |  120000.00 |       120000 |      75000
+ Motorola      |  135000.00 |       135000 |      20000
+ Others        |  168166.50 |        62500 |      10000
+ Samsung       |  237738.10 |       149000 |      25000
+ OnePlus       |  258857.14 |       220000 |     120000
+ Hydrogen      |  260000.00 |       260000 |     260000
+ Apple         |  288650.99 |       235000 |     160000
+ Google        |  337104.17 |       320000 |     230000
+ Microsoft     |  350000.00 |       350000 |     350000
+ Thuraya       |  574999.50 |     574999.5 |     449999
+ Iridium       |  699999.00 |       699999 |     699999
+(29 rows)
+
